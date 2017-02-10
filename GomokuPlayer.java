@@ -190,9 +190,9 @@ public class GomokuPlayer
 		
 		//initalizes value depending on if it is min or max, these values will mostly likely get overwritten
 		if(turn == enemy)
-			value = 100000000;
+			value = 100000;
 		else
-			value = -100000000;
+			value = -100000;
 		
 		// make and get current available moves
 		
@@ -209,22 +209,20 @@ public class GomokuPlayer
 			newBoard[moves.get(i).getX()][moves.get(i).getY()] = turn;
 			moves.remove(curMove);
 			
-			int treeValue = search(newBoard, depth, other(turn), moves, alpha, beta);
 			
-			moves.add(i, curMove);
-			
-			
-			if(treeValue < value && turn == enemy)
+			if(turn == enemy)
 			{
-				value = treeValue;
+				value = min(value, search(newBoard, depth, other(turn), moves, alpha, beta));
 				beta = min(beta, value);
 			}
 			
-			else if (treeValue > value && turn == player)
+			else if (turn == player)
 			{
-				value = treeValue;
+				value = max(value, search(newBoard, depth, other(turn), moves, alpha, beta));
 				alpha = max(alpha, value);
 			}
+			
+			moves.add(i, curMove);
 			
 			if(beta <= alpha)
 				break;

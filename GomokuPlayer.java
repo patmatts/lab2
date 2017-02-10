@@ -8,12 +8,12 @@ import java.util.ArrayList;
 public class GomokuPlayer 
 {
 
-	private char player;
+	private static char player;
 	private static char enemy;
 	private static int boardSize;
 	private char[][] currentBoard;
 	
-	private final int MAX_DEPTH = 3;
+	private final int MAX_DEPTH = 2;
 	
 	//in and out protocol
 	private DataOutputStream dOut;
@@ -54,66 +54,54 @@ public class GomokuPlayer
 	public void testPlayer()
 	{
 		
-		currentBoard[3][1] = ' ';
-		currentBoard[1][2] = ' ';
-		currentBoard[3][3] = ' ';
-		currentBoard[1][4] = ' ';
-		currentBoard[1][5] = ' ';
+		currentBoard[1][1] = 'x';
+		currentBoard[1][2] = 'o';
+		currentBoard[1][3] = 'o';
+		currentBoard[1][4] = 'o';
+		currentBoard[1][5] = 'o';
 		
-		currentBoard[1][1] = 'o';
-		currentBoard[2][2] = 'o';
-		currentBoard[3][3] = 'o';
-		currentBoard[4][4] = ' ';
-		currentBoard[5][5] = 'o';
-		
-		currentBoard[4][4] = 'o';
-		currentBoard[4][5] = ' ';
-		currentBoard[4][6] = ' ';
-		currentBoard[4][7] = ' ';
+		currentBoard[4][4] = 'x';
+		currentBoard[4][5] = 'x';
+		currentBoard[4][6] = 'x';
 		
 		List<Move> moves = new ArrayList<Move>();
 		
 		printBoard(currentBoard);
 		
-		//getMoves(moves, currentBoard);
+		getMoves(moves, currentBoard);
 		
-		//Move move = startSearch();
-		//System.out.println(move.getX() + " " + move.getY());
-		
-		System.out.println(checkTerminal(currentBoard));
+		Move move = startSearch();
+		System.out.println(move.getX() + " " + move.getY());
 		
 		//System.out.println(simpleHeuristic(currentBoard));
-		//System.out.println(otherHeuristic(currentBoard));
 		
 	}
 	
-	//called from client, contains main player loop
 	public String gomokuMain(char turn) throws IOException, UnknownHostException
 	{
 		String status = "continuing";
 		
-		System.out.println("player: " + player);
+		//if(turn != player)
+			//return "error";
 		
-		
-		// main loop for the program, keeps going as long as the game is not over
 		do
 		{
+			//List<Move> moves = new ArrayList<Move>();
 			
-			//starts search, returns best move
+			//getMoves(moves, currentBoard);
+			
 			Move chosenMove = startSearch();
 			
-			//sends move to server
 			makeMove(chosenMove);
 			
 			status = readServer();
 			System.out.println(status);
 			
-		} while(status.equals("continuing")); //loop continues while server says to
+		} while(status.equals("continuing"));
 		
 		return status;
 	}
 	
-	//reads in the board and status
 	private String readServer() throws IOException, UnknownHostException
 	{
 		String line = in.readLine();
@@ -130,6 +118,7 @@ public class GomokuPlayer
 	    for(int i = 1; i < boardSize; i++)
 	    {
 	    	line = in.readLine();
+	    	//System.out.println(line);
 	    	currentBoard[i] = line.toCharArray();
 	    }
 	    
@@ -137,7 +126,6 @@ public class GomokuPlayer
 	    return status;
 	}
 	
-	//initalizes search and returns chosen move
 	private Move startSearch()
 	{
 		//variables to start search depth is zero at this point
@@ -152,18 +140,12 @@ public class GomokuPlayer
 		
 		maxMove = moves.get(0);
 		
-		//finds all branches off of root and recursively searches each one
 		for(int i = 1; i < moves.size(); i++)
 		{
-			Move curMove = moves.get(i);
-			
 			char[][] newBoard = copyBoard(currentBoard);
-			newBoard[curMove.getX()][curMove.getY()] = player;
-			moves.remove(curMove);
+			newBoard[moves.get(i).getX()][moves.get(i).getY()] = player;
 			
-			int treeMax = search(newBoard, depth, other(player), moves, -10000000, 10000000);
-			
-			moves.add(i, curMove);
+			int treeMax = search(newBoard, depth, other(player));
 			
 			if(treeMax > max)
 			{
@@ -176,63 +158,34 @@ public class GomokuPlayer
 		return maxMove;
 	}
 	
-	//recursive part of minimax search, contains alpha beta pruning
-	// terminates at depth then evaluates board states and returns best state as a value
-	private int search(char[][] board, int depth, char turn, List<Move> moves, int alpha, int beta)
+	private int search(char[][] board, int depth, char turn)
 	{
-		int value;
+		int min = 1000000;
 		depth++;
 		
-		//checks if this is a terminal state, if so it returns the value of the state(theoretically infinity or negative infinity)
-		value = checkTerminal(board);
-		if(value != 0)
-			return value;
-		
-		//initalizes value depending on if it is min or max, these values will mostly likely get overwritten
-		if(turn == enemy)
-			value = 100000000;
-		else
-			value = -100000000;
-		
 		// make and get current available moves
+		List<Move> moves = new ArrayList<Move>();
+				
+		getMoves(moves, board);
 		
-		
-		if(depth >= MAX_DEPTH || moves.size() == 0)
-			//return simpleHeuristic(board);
-			return otherHeuristic(board);
+		if(depth > MAX_DEPTH || moves.size() == 0)
+			return simpleHeuristic(board);
 		
 		for(int i = 0; i < moves.size(); i++)
 		{
-			Move curMove = moves.get(i);
-			
 			char[][] newBoard = copyBoard(board);
 			newBoard[moves.get(i).getX()][moves.get(i).getY()] = turn;
-			moves.remove(curMove);
 			
-			int treeValue = search(newBoard, depth, other(turn), moves, alpha, beta);
+			int treeMin = search(newBoard, depth, other(turn));
 			
-			moves.add(i, curMove);
-			
-			
-			if(treeValue < value && turn == enemy)
+			if(treeMin < min)
 			{
-				value = treeValue;
-				beta = min(beta, value);
+				min = treeMin;
 			}
-			
-			else if (treeValue > value && turn == player)
-			{
-				value = treeValue;
-				alpha = max(alpha, value);
-			}
-			
-			if(beta <= alpha)
-				break;
-			
 		    
 		}
 		
-		return value;
+		return min;
 	}
 	
 	private void makeMove(Move m)  throws IOException, UnknownHostException
@@ -263,24 +216,6 @@ public class GomokuPlayer
 				
 			}
 		
-	}
-	
-	//returns minimum of 2 values
-	public int min(int value1, int value2)
-	{
-		if(value1 > value2)
-			return value2;
-		else
-			return value1;
-	}
-	
-	//returns maximum of 2 values
-	public int max(int value1, int value2)
-	{
-		if(value1 < value2)
-			return value2;
-		else
-			return value1;
 	}
 	
 	private char[][] copyBoard(char[][] oldBoard)
@@ -324,115 +259,11 @@ public class GomokuPlayer
 		}
 	}
 	
-	private int checkTerminal(char[][] board)
-	{
-		int count = 0;
-		boolean player;
-		
-		//count rows ahead for 5 in a row
-		for(int row = 0; row < boardSize; row++)
-		{
-			for(int col = 0; col < boardSize; col++)
-			{
-				count = 0;
-				
-				//determine if spot is blank if so cant be terminal
-				if(board[row][col] == ' ')
-					continue;
-				else if(board[row][col] == this.player)
-					player = true;
-				else
-					player = false;
-				
-				//check row ahead
-				for(int i = col; i < col + 5; i++)
-				{
-					if(i >= boardSize || board[row][i] == ' ')
-						break;
-					else if(player && board[row][i] == enemy)
-						break;
-					else if(!player && board[row][i] == this.player)
-						break;
-						
-					count++;
-				}
-				
-				if(count == 5 && player == true)
-					return 10000000;
-				else if(count == 5 && player == false)
-					return -10000000;
-				
-				count = 0;
-				
-				for(int i = row; i < row + 5; i++)
-				{
-					if(i >= boardSize || board[i][col] == ' ')
-						break;
-					else if(player && board[i][col] == enemy)
-						break;
-					else if(!player && board[i][col] == this.player)
-						break;
-					
-					count++;
-				}
-				
-				if(count == 5 && player == true)
-					return 10000000;
-				else if(count == 5 && player == false)
-					return -10000000;
-				
-				count = 0;
-				
-				
-				int j = col;
-				for(int i = row; i < row + 5; i++)
-				{
-					
-					if(i >= boardSize || j >= boardSize || board[i][j] == ' ')
-						break;
-					else if(player && board[i][j] == enemy)
-						break;
-					else if(!player && board[i][j] == this.player)
-						break;
-					
-					count++;
-					j++;
-				}
-				
-				if(count == 5 && player == true)
-					return 10000000;
-				else if(count == 5 && player == false)
-					return -10000000;
-				
-				count = 0;
-				
-			}
-		}
-		
-		return 0;
-		
-	}
-	
-	private int otherHeuristic(char[][] board)
-	{
-		double[][] boardValues = new double[boardSize][boardSize];
-		double total;
-		
-		BoardHeuristic heuristic = new BoardHeuristic(player, boardSize, board);
-		heuristic.createBoardValues();
-		boardValues = heuristic.getBoardValues();
-		total = heuristic.boardValueTotal(boardValues);
-		
-		int value = (int)(total * 100);
-		
-		return value;
-	}
 	
 	//simple heuristic to analyze board for testing purposes
 	private int simpleHeuristic(char[][] board)
 	{
 		int score = 0;
-		
 		
 		for(int row = 0; row < boardSize; row++)
 			for(int col = 0; col < boardSize; col++)
@@ -471,7 +302,7 @@ public class GomokuPlayer
 		else if(countE == 4 && countB == 1)
 			score -= 10000;
 		
-		/*countP = 0;
+		countP = 0;
 		countE = 0;
 		countB = 0;
 		
@@ -490,14 +321,8 @@ public class GomokuPlayer
 		if(countP == 4 && countB == 1)
 			score += 5000;
 		
-		else if(countE == 4 && countB == 1)
+		else if(countP == 4 && countB == 1)
 			score -= 10000;
-		
-		else if(countE == 5)
-			score -= 1000000;
-		
-		else if(countP == 5)
-			score += 1000000;*/
 		
 		return score;
 	}

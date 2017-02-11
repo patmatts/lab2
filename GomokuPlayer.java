@@ -1,9 +1,11 @@
-import java.util.List;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 public class GomokuPlayer 
 {
@@ -13,7 +15,16 @@ public class GomokuPlayer
 	private static int boardSize;
 	private char[][] currentBoard;
 	
+	private long testTime = 0;
+	
+	private final int WIN = 5;
 	private final int MAX_DEPTH = 3;
+	
+	Move[] DIRECTIONS = {
+			new Move(1, 1), // top left to bottom right
+			new Move(0, 1), //top to bottom
+			new Move(-1, 1), //top right to bottom left
+			new Move(1, 0)}; //left to right
 	
 	//in and out protocol
 	private DataOutputStream dOut;
@@ -55,20 +66,20 @@ public class GomokuPlayer
 	{
 		
 		currentBoard[3][1] = ' ';
-		currentBoard[1][2] = ' ';
+		currentBoard[3][2] = ' ';
 		currentBoard[3][3] = ' ';
-		currentBoard[1][4] = ' ';
-		currentBoard[1][5] = ' ';
+		currentBoard[3][4] = ' ';
+		currentBoard[3][5] = ' ';
 		
-		currentBoard[1][1] = 'o';
-		currentBoard[2][2] = 'o';
-		currentBoard[3][3] = 'o';
+		currentBoard[1][1] = ' ';
+		currentBoard[6][3] = 'o';
+		currentBoard[8][3] = 'o';
+		currentBoard[7][3] = 'o';
+		currentBoard[3][6] = ' ';
+		
 		currentBoard[4][4] = ' ';
-		currentBoard[5][5] = 'o';
-		
-		currentBoard[4][4] = 'o';
-		currentBoard[4][5] = ' ';
-		currentBoard[4][6] = ' ';
+		currentBoard[5][4] = ' ';
+		currentBoard[6][4] = ' ';
 		currentBoard[4][7] = ' ';
 		
 		List<Move> moves = new ArrayList<Move>();
@@ -77,13 +88,21 @@ public class GomokuPlayer
 		
 		//getMoves(moves, currentBoard);
 		
-		//Move move = startSearch();
-		//System.out.println(move.getX() + " " + move.getY());
+		long startTime = System.nanoTime();
+		Move move = startSearch();
+		System.out.println(move.getX() + " " + move.getY());
+		long endTime = System.nanoTime();
+
+		long duration = (endTime - startTime);  //divide by 1000000 to get milliseconds.
+		System.out.println("Search took " + duration / 1000000000.0 + " seconds.");
 		
-		System.out.println(checkTerminal(currentBoard));
+		System.out.println("Test time took " + testTime / 1000000000.0 + " seconds.");
+		
+		//System.out.println(checkTerminal(currentBoard));
 		
 		//System.out.println(simpleHeuristic(currentBoard));
 		//System.out.println(otherHeuristic(currentBoard));
+		//System.out.println(lineHeuristic(currentBoard));
 		
 	}
 	
@@ -150,18 +169,21 @@ public class GomokuPlayer
 		
 		getMoves(moves, currentBoard);
 		
+		sortMoves(moves, copyBoard(currentBoard), player);
+		
 		maxMove = moves.get(0);
 		
 		//finds all branches off of root and recursively searches each one
 		for(int i = 1; i < moves.size(); i++)
 		{
+			
 			Move curMove = moves.get(i);
 			
 			char[][] newBoard = copyBoard(currentBoard);
 			newBoard[curMove.getX()][curMove.getY()] = player;
 			moves.remove(curMove);
 			
-			int treeMax = search(newBoard, depth, other(player), moves, -10000000, 10000000);
+			int treeMax = search(newBoard, depth, other(player), new ArrayList<Move>(moves), -10000000, 10000000);
 			
 			moves.add(i, curMove);
 			
@@ -170,8 +192,10 @@ public class GomokuPlayer
 				max = treeMax;
 				maxMove = moves.get(i);
 			}
+			
 		    
 		}
+		
 		
 		return maxMove;
 	}
@@ -188,41 +212,46 @@ public class GomokuPlayer
 		if(value != 0)
 			return value;
 		
+		
 		//initalizes value depending on if it is min or max, these values will mostly likely get overwritten
 		if(turn == enemy)
 			value = 100000;
 		else
 			value = -100000;
 		
-		// make and get current available moves
-		
-		
 		if(depth >= MAX_DEPTH || moves.size() == 0)
+		{
+			long startTime = System.nanoTime();
+			int val = lineHeuristic(board);
+			testTime += (System.nanoTime() - startTime);
+			return val;
+		}
 			//return simpleHeuristic(board);
-			return otherHeuristic(board);
+			//return otherHeuristic(board);
 		
 		for(int i = 0; i < moves.size(); i++)
 		{
 			Move curMove = moves.get(i);
 			
-			char[][] newBoard = copyBoard(board);
-			newBoard[moves.get(i).getX()][moves.get(i).getY()] = turn;
+			board[moves.get(i).getX()][moves.get(i).getY()] = turn;
 			moves.remove(curMove);
-			
 			
 			if(turn == enemy)
 			{
-				value = min(value, search(newBoard, depth, other(turn), moves, alpha, beta));
+				value = min(value, search(board, depth, other(turn), moves, alpha, beta));
 				beta = min(beta, value);
 			}
 			
 			else if (turn == player)
 			{
-				value = max(value, search(newBoard, depth, other(turn), moves, alpha, beta));
+				value = max(value, search(board, depth, other(turn), moves, alpha, beta));
 				alpha = max(alpha, value);
 			}
 			
+			
 			moves.add(i, curMove);
+			board[moves.get(i).getX()][moves.get(i).getY()] = ' ';
+			
 			
 			if(beta <= alpha)
 				break;
@@ -262,6 +291,31 @@ public class GomokuPlayer
 			}
 		
 	}
+	
+	private void sortMoves(List<Move> moves, char[][] board, char turn)
+	{
+		
+		for(int i = 0; i < moves.size(); i++)
+		{
+			board[moves.get(i).getY()][moves.get(i).getX()] = turn;
+			moves.get(i).setValue(lineHeuristic(board));
+			board[moves.get(i).getY()][moves.get(i).getX()] = ' ';
+		}
+		
+		Collections.sort(moves, new Comparator<Move>(){
+		     public int compare(Move obj1, Move obj2){
+		         if(obj1.getValue() == obj2.getValue())
+		             return 0;
+		         if(turn == player)
+		        	 return obj1.getValue() > obj2.getValue() ? -1 : 1;
+		         else
+		        	 return obj1.getValue() < obj2.getValue() ? -1 : 1;
+		     }
+		});
+		
+		
+	}
+	
 	
 	//returns minimum of 2 values
 	public int min(int value1, int value2)
@@ -404,6 +458,28 @@ public class GomokuPlayer
 				
 				count = 0;
 				
+				j = col;
+				for(int i = row; i < row + 5; i++)
+				{
+					
+					if(i >= boardSize || j < 0 || board[i][j] == ' ')
+						break;
+					else if(player && board[i][j] == enemy)
+						break;
+					else if(!player && board[i][j] == this.player)
+						break;
+					
+					count++;
+					j--;
+				}
+				
+				if(count == 5 && player == true)
+					return 10000000;
+				else if(count == 5 && player == false)
+					return -10000000;
+				
+				count = 0;
+				
 			}
 		}
 		
@@ -411,6 +487,7 @@ public class GomokuPlayer
 		
 	}
 	
+	//implements levi's Heuristic
 	private int otherHeuristic(char[][] board)
 	{
 		double[][] boardValues = new double[boardSize][boardSize];
@@ -498,6 +575,64 @@ public class GomokuPlayer
 			score += 1000000;*/
 		
 		return score;
+	}
+	
+	private int lineHeuristic(char[][] board)
+	{
+		int score = 0;
+		Move spot;
+		
+		for(int row = 0; row < boardSize; row++)
+			for(int col = 0; col < boardSize; col++)
+			{
+				spot = new Move(col, row);
+				
+				//evaluate the 4 directions
+				score += lineEval(board, spot, DIRECTIONS[0]);
+				score += lineEval(board, spot, DIRECTIONS[1]);
+				score += lineEval(board, spot, DIRECTIONS[2]);
+				score += lineEval(board, spot, DIRECTIONS[3]);
+			}
+		
+		return score;
+	}
+	
+	private int lineEval(char[][] board, Move spot, Move direction)
+	{
+		int count = 0;
+		char piece = board[spot.getY()][spot.getX()];
+		
+		if(spot.getY() + direction.getY() * WIN - 1 >= boardSize || spot.getY() + direction.getY() * WIN - 1 < 0)
+			return 0;
+		else if(spot.getX() + direction.getX() * WIN - 1 >= boardSize || spot.getX() + direction.getX() * WIN - 1 < 0)
+			return 0;
+		
+		for(int i = 0; i < WIN; i++)
+		{
+			char evalSpot = board[spot.getY() + direction.getY() * i][spot.getX() + direction.getX() * i];
+			
+			if(evalSpot == ' ')
+				continue;
+			else if(piece == evalSpot)
+				count++;
+			else if(piece != evalSpot && piece == ' ')
+			{
+				piece = evalSpot;
+				count++;
+			}
+			else
+			{
+				return 0;
+			}
+		}
+		
+		
+		if(piece == player)
+			return (int)Math.pow(5, count);
+		else if(piece == enemy)
+			return -2 * (int)Math.pow(5, count);
+		else
+			return 0;
 	}
 	
 	

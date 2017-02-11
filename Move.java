@@ -3,6 +3,7 @@ public class Move {
 
 	private int x;
 	private int y;
+	private int value;
 	
 	public Move()
 	{
@@ -34,5 +35,15 @@ public class Move {
 	public int getY()
 	{
 		return y;
+	}
+	
+	public int getValue()
+	{
+		return value;
+	}
+	
+	public void setValue(int val)
+	{
+		value = val;
 	}
 }

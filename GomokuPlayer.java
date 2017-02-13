@@ -20,8 +20,11 @@ public class GomokuPlayer
 	
 	private long startTime;
 	
+	private final int INFINITY = 10000000;
+	private final int NEG_INFINITY = -10000000;
+	private final int MAX_DEPTH = 10;
 	private final int WIN = 5;
-	private final double MAX_TIME = 4;
+	private final double MAX_TIME = 1.90;
 	
 	Move[] DIRECTIONS = {
 			new Move(1, 1), // top left to bottom right
@@ -74,20 +77,19 @@ public class GomokuPlayer
 	{
 		
 		currentBoard[3][1] = ' ';
-		currentBoard[3][2] = 'x';
-		currentBoard[3][3] = 'x';
-		currentBoard[3][4] = ' ';
-		currentBoard[3][5] = ' ';
+		currentBoard[3][2] = ' ';
+		currentBoard[5][3] = 'x';
+		currentBoard[6][5] = 'o';
+		currentBoard[6][4] = 'o';
 		
 		currentBoard[1][1] = ' ';
 		currentBoard[6][3] = 'o';
 		currentBoard[8][3] = 'o';
 		currentBoard[7][3] = 'o';
-		currentBoard[3][6] = ' ';
+		currentBoard[9][3] = 'o';
 		
 		currentBoard[4][4] = ' ';
 		currentBoard[5][4] = ' ';
-		currentBoard[6][4] = 'x';
 		currentBoard[4][7] = ' ';
 		
 		//storeHash(currentBoard, -621);
@@ -142,6 +144,7 @@ public class GomokuPlayer
 			//sends move to server
 			makeMove(chosenMove);
 			
+			//reads server status then prints
 			status = readServer();
 			System.out.println(status);
 			
@@ -174,22 +177,29 @@ public class GomokuPlayer
 	    return status;
 	}
 	
+	//implements iterative deepening to stay under imposed time limit and not have useless moves
 	private Move iterativeDeepening()
 	{
+		//assigns start time to global variable
 		startTime = System.nanoTime();
 		int currentDepth = 1;
+		
+		//does a preliminary search to get at least a 1 depth move
 		Move chosenMove = startSearch(currentDepth);
 		Move newChosenMove = new Move(-1, -1);
-		hashMap.clear();
+		hashMap.clear(); //clears history or else AI mixes up data
 		
-		while((System.nanoTime() - startTime) / 1000000000.0 <= MAX_TIME)
+		while((System.nanoTime() - startTime) / 1000000000.0 <= MAX_TIME && currentDepth <= MAX_DEPTH)
 		{
+			currentDepth++;
 			chosenMove = newChosenMove;
 			newChosenMove = startSearch(currentDepth);
 			hashMap.clear();
-			currentDepth++;
 		}
 		
+		currentDepth--;
+		System.out.println("Finished depth: " + currentDepth);
+		//returns best move from highest finished search depth
 		return chosenMove;
 	}
 	
@@ -202,8 +212,9 @@ public class GomokuPlayer
 		// make and get current available moves
 		List<Move> moves = new ArrayList<Move>();
 		
+		//find moves for the currentBoard
 		getMoves(moves, currentBoard);
-		
+		//sort moves by heuristic value in order to help AB pruning
 		moveHSort(moves, copyBoard(currentBoard), player);
 		
 		maxMove = moves.get(0);
@@ -218,7 +229,7 @@ public class GomokuPlayer
 			newBoard[curMove.getX()][curMove.getY()] = player;
 			moves.remove(curMove);
 			
-			int treeMax = search(newBoard, maxDepth, other(player), new ArrayList<Move>(moves), -10000000, 10000000);
+			int treeMax = search(newBoard, maxDepth, other(player), new ArrayList<Move>(moves), -10000000, 10000000); 
 			
 			moves.add(i, curMove);
 			
@@ -241,7 +252,7 @@ public class GomokuPlayer
 	{
 		if((System.nanoTime() - startTime) / 1000000000.0 >= MAX_TIME)
 		{
-			System.out.println((System.nanoTime() - startTime) / 1000000000.0 + " seconds.");
+			//System.out.println((System.nanoTime() - startTime) / 1000000000.0 + " seconds.");
 			return 0;
 		}
 		
@@ -259,7 +270,7 @@ public class GomokuPlayer
 		//testTime += (System.nanoTime() - startTime);
 		
 		//checks if this is a terminal state, if so it returns the value of the state(theoretically infinity or negative infinity)
-		value = checkTerminal(board);
+		value = checkTerminal(board, depth);
 		if(value != 0)
 			return value;
 		
@@ -497,7 +508,7 @@ public class GomokuPlayer
 		return false;
 	}
 	
-	private int checkTerminal(char[][] board)
+	private int checkTerminal(char[][] board, int depth)
 	{
 		int count = 0;
 		boolean player;
@@ -531,9 +542,9 @@ public class GomokuPlayer
 				}
 				
 				if(count == 5 && player == true)
-					return 10000000;
+					return 10000000 - depth;
 				else if(count == 5 && player == false)
-					return -10000000;
+					return -10000000 + depth;
 				
 				count = 0;
 				
@@ -550,9 +561,9 @@ public class GomokuPlayer
 				}
 				
 				if(count == 5 && player == true)
-					return 10000000;
+					return 10000000 - depth;
 				else if(count == 5 && player == false)
-					return -10000000;
+					return -10000000 + depth;
 				
 				count = 0;
 				
@@ -573,9 +584,9 @@ public class GomokuPlayer
 				}
 				
 				if(count == 5 && player == true)
-					return 10000000;
+					return 10000000 - depth;
 				else if(count == 5 && player == false)
-					return -10000000;
+					return -10000000 + depth;
 				
 				count = 0;
 				
@@ -595,9 +606,9 @@ public class GomokuPlayer
 				}
 				
 				if(count == 5 && player == true)
-					return 10000000;
+					return 10000000 - depth;
 				else if(count == 5 && player == false)
-					return -10000000;
+					return -10000000 + depth;
 				
 				count = 0;
 				
@@ -752,9 +763,15 @@ public class GomokuPlayer
 		
 		
 		if(piece == player)
-			return (int)Math.pow(5, count);
+			if(count == 3)
+				return (int)Math.pow(5, count) * 2;
+			else
+				return (int)Math.pow(5, count);
 		else if(piece == enemy)
-			return -2 * (int)Math.pow(5, count);
+			if(count == 3)
+				return -4 * (int)Math.pow(5, count);
+			else
+				return -2 * (int)Math.pow(5, count);
 		else
 			return 0;
 }

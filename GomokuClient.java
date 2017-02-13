@@ -26,15 +26,15 @@ public class GomokuClient {
 	
 	public static void main(String[] args)
 	{
-		//holds agent status for finishing condition
 		reader = new Scanner(System.in);
+		//holds agent status for finishing condition
 		turn = 'n';
 		
 		try
 		{
 			if(socketConnect(HOST, GOMOKUPORT) != 0)
 			{
-				System.out.println("Unable to acquire agent number from host");
+				System.out.println("Unable to acquire information from host");
 				return;
 			}
 			

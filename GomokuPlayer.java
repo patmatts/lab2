@@ -26,7 +26,7 @@ public class GomokuPlayer
 	private final int NEG_INFINITY = -10000000;
 	private final int MAX_DEPTH = 10;
 	private final int WIN = 5;
-	private final double MAX_TIME = 1.95;
+	private final double MAX_TIME = 1.84;
 	
 	Move[] DIRECTIONS = {
 			new Move(1, 1), // top left to bottom right
@@ -139,6 +139,7 @@ public class GomokuPlayer
 		// main loop for the program, keeps going as long as the game is not over
 		do
 		{
+			startTime = System.nanoTime();
 			
 			//starts search, returns best move
 			//Move chosenMove = startSearch();
@@ -187,7 +188,6 @@ public class GomokuPlayer
 	private Move iterativeDeepening() throws IOException, UnknownHostException
 	{
 		//assigns start time to global variable
-		startTime = System.nanoTime();
 		int currentDepth = 1;
 		madeMove = false;
 		
@@ -204,8 +204,8 @@ public class GomokuPlayer
 			hashMap.clear();
 		}
 		
-		currentDepth--;
-		System.out.println("Finished depth: " + currentDepth);
+		//dont decrement depth because real depth is defined slightly differently
+		System.out.println("Finished depth: " + currentDepth + " Move-depth: " + (double)currentDepth / 2);
 		//returns best move from highest finished search depth
 		return bestMove;
 	}

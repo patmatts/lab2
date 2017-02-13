@@ -26,15 +26,15 @@ public class GomokuClient {
 	
 	public static void main(String[] args)
 	{
-		//holds agent status for finishing condition
 		reader = new Scanner(System.in);
+		//holds agent status for finishing condition
 		turn = 'n';
 		
 		try
 		{
 			if(socketConnect(HOST, GOMOKUPORT) != 0)
 			{
-				System.out.println("Unable to acquire agent number from host");
+				System.out.println("Unable to acquire information from host");
 				return;
 			}
 			
@@ -56,11 +56,11 @@ public class GomokuClient {
 		}
 		//exception handling
 		catch(UnknownHostException e) {
-			System.out.println("Unknown Host Exception from MaedenClient");
+			System.out.println("Unknown Host Exception from GomokuClient");
 			return;
 		} 
 		catch(IOException e) {
-			System.out.println("IOException from MaedenClient");
+			System.out.println("IOException from GomokuClient");
 			return;
 		}
 		

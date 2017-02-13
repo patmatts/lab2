@@ -56,11 +56,11 @@ public class GomokuClient {
 		}
 		//exception handling
 		catch(UnknownHostException e) {
-			System.out.println("Unknown Host Exception from MaedenClient");
+			System.out.println("Unknown Host Exception from GomokuClient");
 			return;
 		} 
 		catch(IOException e) {
-			System.out.println("IOException from MaedenClient");
+			System.out.println("IOException from GomokuClient");
 			return;
 		}
 		

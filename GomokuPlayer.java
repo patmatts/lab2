@@ -19,12 +19,14 @@ public class GomokuPlayer
 	HashMap<String, Integer> hashMap = new HashMap<String, Integer>();
 	
 	private long startTime;
+	private Move bestMove;
+	private boolean madeMove;
 	
 	private final int INFINITY = 10000000;
 	private final int NEG_INFINITY = -10000000;
 	private final int MAX_DEPTH = 10;
 	private final int WIN = 5;
-	private final double MAX_TIME = 1.90;
+	private final double MAX_TIME = 1.95;
 	
 	Move[] DIRECTIONS = {
 			new Move(1, 1), // top left to bottom right
@@ -73,7 +75,7 @@ public class GomokuPlayer
 	}
 	
 	//purely for testing purposes
-	public void testPlayer()
+	public void testPlayer() throws IOException, UnknownHostException
 	{
 		
 		currentBoard[3][1] = ' ';
@@ -142,7 +144,11 @@ public class GomokuPlayer
 			//Move chosenMove = startSearch();
 			Move chosenMove = iterativeDeepening();
 			//sends move to server
-			makeMove(chosenMove);
+			if(madeMove == false)
+			{
+				makeMove(chosenMove);
+				madeMove = true;
+			}
 			
 			//reads server status then prints
 			status = readServer();
@@ -178,21 +184,22 @@ public class GomokuPlayer
 	}
 	
 	//implements iterative deepening to stay under imposed time limit and not have useless moves
-	private Move iterativeDeepening()
+	private Move iterativeDeepening() throws IOException, UnknownHostException
 	{
 		//assigns start time to global variable
 		startTime = System.nanoTime();
 		int currentDepth = 1;
+		madeMove = false;
 		
 		//does a preliminary search to get at least a 1 depth move
-		Move chosenMove = startSearch(currentDepth);
+		bestMove = startSearch(currentDepth);
 		Move newChosenMove = new Move(-1, -1);
 		hashMap.clear(); //clears history or else AI mixes up data
 		
 		while((System.nanoTime() - startTime) / 1000000000.0 <= MAX_TIME && currentDepth <= MAX_DEPTH)
 		{
 			currentDepth++;
-			chosenMove = newChosenMove;
+			bestMove = newChosenMove;
 			newChosenMove = startSearch(currentDepth);
 			hashMap.clear();
 		}
@@ -200,11 +207,11 @@ public class GomokuPlayer
 		currentDepth--;
 		System.out.println("Finished depth: " + currentDepth);
 		//returns best move from highest finished search depth
-		return chosenMove;
+		return bestMove;
 	}
 	
 	//initalizes search and returns chosen move
-	private Move startSearch(int maxDepth)
+	private Move startSearch(int maxDepth) throws IOException, UnknownHostException
 	{
 		//variables to start search depth is zero at this point
 		int max = -1000000;
@@ -248,11 +255,16 @@ public class GomokuPlayer
 	
 	//recursive part of minimax search, contains alpha beta pruning
 	// terminates at depth then evaluates board states and returns best state as a value
-	private int search(char[][] board, int depth, char turn, List<Move> moves, int alpha, int beta)
+	private int search(char[][] board, int depth, char turn, List<Move> moves, int alpha, int beta) throws IOException, UnknownHostException
 	{
 		if((System.nanoTime() - startTime) / 1000000000.0 >= MAX_TIME)
 		{
 			//System.out.println((System.nanoTime() - startTime) / 1000000000.0 + " seconds.");
+			if(madeMove == false)
+			{
+				makeMove(bestMove);
+				madeMove = true;
+			}
 			return 0;
 		}
 		

@@ -19,6 +19,7 @@ public class GomokuPlayer
 	HashMap<String, Integer> hashMap = new HashMap<String, Integer>();
 	
 	private long startTime;
+	private long time;
 	private Move bestMove;
 	private boolean madeMove;
 	
@@ -26,7 +27,7 @@ public class GomokuPlayer
 	private final int NEG_INFINITY = -10000000;
 	private final int MAX_DEPTH = 10;
 	private final int WIN = 5;
-	private final double MAX_TIME = 1.84;
+	private final double MAX_TIME = 1.8;
 	
 	Move[] DIRECTIONS = {
 			new Move(1, 1), // top left to bottom right
@@ -80,45 +81,39 @@ public class GomokuPlayer
 		
 		currentBoard[3][1] = ' ';
 		currentBoard[3][2] = ' ';
-		currentBoard[5][3] = 'x';
-		currentBoard[6][5] = 'o';
-		currentBoard[6][4] = 'o';
+		currentBoard[5][3] = ' ';
+		currentBoard[6][5] = ' ';
+		currentBoard[6][4] = ' ';
 		
 		currentBoard[1][1] = ' ';
 		currentBoard[6][3] = 'o';
 		currentBoard[8][3] = 'o';
 		currentBoard[7][3] = 'o';
-		currentBoard[9][3] = 'o';
+		currentBoard[9][3] = ' ';
 		
 		currentBoard[4][4] = ' ';
 		currentBoard[5][4] = ' ';
 		currentBoard[4][7] = ' ';
 		
-		//storeHash(currentBoard, -621);
-		
-		
-		int[] hashValue = new int[1];
-		
-		//hashLook(currentBoard, hashValue);
-		
 		List<Move> moves = new ArrayList<Move>();
 		
 		printBoard(currentBoard);
 		
-		System.out.println(hashValue[0]);
 		
 		//getMoves(moves, currentBoard);
 		
 		
-		long startTime = System.nanoTime();
-		Move move = iterativeDeepening();
+		long startTime2 = System.nanoTime();
+		startTime = System.nanoTime();
+		//Move move = iterativeDeepening();
+		Move move = startSearch(4);
 		System.out.println(move.getX() + " " + move.getY());
 		long endTime = System.nanoTime();
-
-		long duration = (endTime - startTime);  //divide by 1000000 to get milliseconds.
+		
+		long duration = (endTime - startTime2);  //divide by 1000000 to get milliseconds.
 		System.out.println("Search took " + duration / 1000000000.0 + " seconds.");
 		
-		//System.out.println("Test time took " + testTime / 1000000000.0 + " seconds.");
+		System.out.println("Test time took " + time / 1000000000.0 + " seconds.");
 		
 		//System.out.println(checkTerminal(currentBoard));
 		
@@ -213,6 +208,8 @@ public class GomokuPlayer
 	//initalizes search and returns chosen move
 	private Move startSearch(int maxDepth) throws IOException, UnknownHostException
 	{
+		int alpha = -10000000;
+		int beta = 10000000;
 		//variables to start search depth is zero at this point
 		int max = -1000000;
 		Move maxMove;
@@ -236,7 +233,7 @@ public class GomokuPlayer
 			newBoard[curMove.getX()][curMove.getY()] = player;
 			moves.remove(curMove);
 			
-			int treeMax = search(newBoard, maxDepth, other(player), new ArrayList<Move>(moves), -10000000, 10000000); 
+			int treeMax = search(newBoard, maxDepth, other(player), new ArrayList<Move>(moves), alpha, beta); 
 			
 			moves.add(i, curMove);
 			
@@ -244,7 +241,11 @@ public class GomokuPlayer
 			{
 				max = treeMax;
 				maxMove = moves.get(i);
+				alpha = max(alpha, max);
 			}
+			
+			if(beta <= alpha)
+				break;
 			
 		    
 		}
@@ -274,11 +275,14 @@ public class GomokuPlayer
 		
 		//long startTime = System.nanoTime();
 		//passing by reference using an array(I shoulda done this program in C)
+		long startTime3 = System.nanoTime();
 		if(hashLook(board, hashValue))
 		{
 			//testTime += (System.nanoTime() - startTime);
+			time += (System.nanoTime() - startTime3);
 			return hashValue[0];
 		}
+		time += (System.nanoTime() - startTime3);
 		//testTime += (System.nanoTime() - startTime);
 		
 		//checks if this is a terminal state, if so it returns the value of the state(theoretically infinity or negative infinity)
@@ -300,7 +304,7 @@ public class GomokuPlayer
 		}
 		else
 		{
-			//moveLSort(moves, board, turn);
+			//moveHSort(moves, copyBoard(board), turn);
 			
 			for(int i = 0; i < moves.size(); i++)
 			{
@@ -311,13 +315,13 @@ public class GomokuPlayer
 				
 				if(turn == enemy)
 				{
-					value = min(value, search(board, depth, other(turn), moves, alpha, beta));
+					value = min(value, search(board, depth, other(turn), new ArrayList<Move>(moves), alpha, beta));
 					beta = min(beta, value);
 				}
 				
 				else if (turn == player)
 				{
-					value = max(value, search(board, depth, other(turn), moves, alpha, beta));
+					value = max(value, search(board, depth, other(turn), new ArrayList<Move>(moves), alpha, beta));
 					alpha = max(alpha, value);
 				}
 				
@@ -333,9 +337,9 @@ public class GomokuPlayer
 			}
 		}
 		
-		//startTime = System.nanoTime();
+		startTime3 = System.nanoTime();
 		storeHash(board, value);
-		//testTime += (System.nanoTime() - startTime);
+		time += (System.nanoTime() - startTime3);
 		return value;
 	}
 	
@@ -554,9 +558,9 @@ public class GomokuPlayer
 				}
 				
 				if(count == 5 && player == true)
-					return 10000000 - depth;
+					return 10000000 + depth;
 				else if(count == 5 && player == false)
-					return -10000000 + depth;
+					return -10000000 - depth;
 				
 				count = 0;
 				
@@ -573,9 +577,9 @@ public class GomokuPlayer
 				}
 				
 				if(count == 5 && player == true)
-					return 10000000 - depth;
+					return 10000000 + depth;
 				else if(count == 5 && player == false)
-					return -10000000 + depth;
+					return -10000000 - depth;
 				
 				count = 0;
 				
@@ -596,9 +600,9 @@ public class GomokuPlayer
 				}
 				
 				if(count == 5 && player == true)
-					return 10000000 - depth;
+					return 10000000 + depth;
 				else if(count == 5 && player == false)
-					return -10000000 + depth;
+					return -10000000 - depth;
 				
 				count = 0;
 				
@@ -618,9 +622,9 @@ public class GomokuPlayer
 				}
 				
 				if(count == 5 && player == true)
-					return 10000000 - depth;
+					return 10000000 + depth;
 				else if(count == 5 && player == false)
-					return -10000000 + depth;
+					return -10000000 - depth;
 				
 				count = 0;
 				

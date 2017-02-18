@@ -1,3 +1,9 @@
+// GomokuClient.java: makes initial contect with the Gomoku server
+// to start a game
+
+// CS455 Lab #:2
+// Name: Patrick Matts, Levi Sinclair, Austen Herrick
+// Date: 2/7/17
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
@@ -6,7 +12,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.Scanner;
 
 public class GomokuClient {
 	
@@ -16,7 +21,6 @@ public class GomokuClient {
 	private static DataOutputStream dOut = null;
 	private static DataInputStream dIn = null;
 	private static BufferedReader in = null;
-	private static Scanner reader;
 	
 	private static int boardSize;
 	private static char[][] board;
@@ -26,7 +30,6 @@ public class GomokuClient {
 	
 	public static void main(String[] args)
 	{
-		reader = new Scanner(System.in);
 		//holds agent status for finishing condition
 		turn = 'n';
 		
@@ -39,15 +42,9 @@ public class GomokuClient {
 			}
 			
 			System.out.println("Board Size: " + board.length);
-			System.out.println("Turn: "  + turn);
 			
 			GomokuPlayer player = new GomokuPlayer(turn, boardSize, board, in, dOut);
 			player.gomokuMain(turn);
-			
-			//ReflexAgent refAgent = new ReflexAgent(in, dOut, agentNums[0]);
-			
-			//agentStatus = refAgent.reflexMain();
-			
 			
 			//closes in and out protocol and socket
 			dIn.close();
@@ -66,7 +63,7 @@ public class GomokuClient {
 		
 	}
 	
-	//connects to socket and receives agent number and sends request to be a normal agent
+	//connects to socket and receives agent number and sends request to join game
 	public static int socketConnect(String host, int port)
 	{
 		try
@@ -99,7 +96,6 @@ public class GomokuClient {
 		    for(int i = 1; i < boardSize; i++)
 		    {
 		    	line = in.readLine();
-		    	System.out.println(line);
 		    	board[i] = line.toCharArray();
 		    }
 		    

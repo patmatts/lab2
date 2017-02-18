@@ -1,9 +1,15 @@
+// GomokuPlayer.java: implements the actual decision making to play a Gomoku game
+
+// CS455 Lab #:2
+// Name: Patrick Matts, Levi Sinclair, Austen Herrick
+// Date: 2/7/17
+
+
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -11,24 +17,27 @@ import java.util.List;
 
 public class GomokuPlayer 
 {
-
+	//general use class variables
 	private char player;
 	private char enemy;
-	private static int boardSize;
+	private int boardSize;
 	private char[][] currentBoard;
 	HashMap<String, Integer> hashMap = new HashMap<String, Integer>();
 	
+	//class variables to keep track of current bestMove and time
+	//for iterative deepening
 	private long startTime;
-	private long time;
 	private Move bestMove;
 	private boolean madeMove;
 	
+	//constant values
 	private final int INFINITY = 10000000;
 	private final int NEG_INFINITY = -10000000;
 	private final int MAX_DEPTH = 10;
 	private final int WIN = 5;
-	private final double MAX_TIME = 1.8;
+	private final double MAX_TIME = 1.75;
 	
+	//different directions in terms of 
 	Move[] DIRECTIONS = {
 			new Move(1, 1), // top left to bottom right
 			new Move(0, 1), //top to bottom
@@ -44,7 +53,7 @@ public class GomokuPlayer
 	private DataOutputStream dOut;
 	private BufferedReader in;
 	
-	//testing constructor
+	//testing constructor for when program doesn't need to send output to a server
 	public GomokuPlayer(char player, int size, char[][] board)
 	{
 		this.player = player;
@@ -58,6 +67,7 @@ public class GomokuPlayer
 			enemy = 'x';
 	}
 	
+	//general constructor for initalizing the GomokuPlayer
 	public GomokuPlayer(char player, int size, char[][] board, BufferedReader in, DataOutputStream dOut)
 	{
 		this.player = player;
@@ -75,53 +85,6 @@ public class GomokuPlayer
 		
 	}
 	
-	//purely for testing purposes
-	public void testPlayer() throws IOException, UnknownHostException
-	{
-		
-		currentBoard[3][1] = ' ';
-		currentBoard[3][2] = ' ';
-		currentBoard[5][3] = ' ';
-		currentBoard[6][5] = ' ';
-		currentBoard[6][4] = ' ';
-		
-		currentBoard[1][1] = ' ';
-		currentBoard[6][3] = 'o';
-		currentBoard[8][3] = 'o';
-		currentBoard[7][3] = 'o';
-		currentBoard[9][3] = ' ';
-		
-		currentBoard[4][4] = ' ';
-		currentBoard[5][4] = ' ';
-		currentBoard[4][7] = ' ';
-		
-		List<Move> moves = new ArrayList<Move>();
-		
-		printBoard(currentBoard);
-		
-		
-		//getMoves(moves, currentBoard);
-		
-		
-		long startTime2 = System.nanoTime();
-		startTime = System.nanoTime();
-		//Move move = iterativeDeepening();
-		Move move = startSearch(4);
-		System.out.println(move.getX() + " " + move.getY());
-		long endTime = System.nanoTime();
-		
-		long duration = (endTime - startTime2);  //divide by 1000000 to get milliseconds.
-		System.out.println("Search took " + duration / 1000000000.0 + " seconds.");
-		
-		System.out.println("Test time took " + time / 1000000000.0 + " seconds.");
-		
-		//System.out.println(checkTerminal(currentBoard));
-		
-		//System.out.println(simpleHeuristic(currentBoard));
-		//System.out.println(otherHeuristic(currentBoard));
-		//System.out.println(lineHeuristic(currentBoard));
-		
-	}
 	
 	//called from client, contains main player loop
 	public String gomokuMain(char turn) throws IOException, UnknownHostException
@@ -137,7 +100,6 @@ public class GomokuPlayer
 			startTime = System.nanoTime();
 			
 			//starts search, returns best move
-			//Move chosenMove = startSearch();
 			Move chosenMove = iterativeDeepening();
 			//sends move to server
 			if(madeMove == false)
@@ -208,10 +170,10 @@ public class GomokuPlayer
 	//initalizes search and returns chosen move
 	private Move startSearch(int maxDepth) throws IOException, UnknownHostException
 	{
-		int alpha = -10000000;
-		int beta = 10000000;
+		int alpha = NEG_INFINITY;
+		int beta = INFINITY;
 		//variables to start search depth is zero at this point
-		int max = -1000000;
+		int max = -100000000;
 		Move maxMove;
 		// make and get current available moves
 		List<Move> moves = new ArrayList<Move>();
@@ -275,15 +237,10 @@ public class GomokuPlayer
 		
 		//long startTime = System.nanoTime();
 		//passing by reference using an array(I shoulda done this program in C)
-		long startTime3 = System.nanoTime();
 		if(hashLook(board, hashValue))
 		{
-			//testTime += (System.nanoTime() - startTime);
-			time += (System.nanoTime() - startTime3);
 			return hashValue[0];
 		}
-		time += (System.nanoTime() - startTime3);
-		//testTime += (System.nanoTime() - startTime);
 		
 		//checks if this is a terminal state, if so it returns the value of the state(theoretically infinity or negative infinity)
 		value = checkTerminal(board, depth);
@@ -313,6 +270,8 @@ public class GomokuPlayer
 				board[moves.get(i).getX()][moves.get(i).getY()] = turn;
 				moves.remove(curMove);
 				
+				//depending on if node is enemy or player it acts as min or max
+				//in this case dont need two functions
 				if(turn == enemy)
 				{
 					value = min(value, search(board, depth, other(turn), new ArrayList<Move>(moves), alpha, beta));
@@ -337,25 +296,26 @@ public class GomokuPlayer
 			}
 		}
 		
-		startTime3 = System.nanoTime();
 		storeHash(board, value);
-		time += (System.nanoTime() - startTime3);
 		return value;
 	}
 	
+	//sends move to the server
 	private void makeMove(Move m)  throws IOException, UnknownHostException
 	{
 		dOut.writeBytes(m.getX() + " " + m.getY() + "\n");
 		dOut.flush(); 
 	}
 	
+	/*
+	 * makes a random move, not useful anymore
 	private Move randomMove(List<Move> moves)
 	{
 		int ranMove = (int)(Math.random() * moves.size());
 		
 		return moves.get(ranMove);
 	}
-	
+	*/
 	private void getMoves(List<Move> moves, char[][] board)
 	{
 		Move move = null;
@@ -387,6 +347,9 @@ public class GomokuPlayer
 		
 	}
 	
+	/*
+	 * experimental move sort function to be used with minimax
+	 * did not end up being faster so function was scrapped
 	private void moveLSort(List<Move> moves, char[][] board, char turn)
 	{
 		int row, col, score;
@@ -408,7 +371,9 @@ public class GomokuPlayer
 		
 		moveSort(moves, turn);
 	}
+	*/
 	
+	//does the actual sorting of the Move array list with the values of the moves
 	private void moveSort(List<Move> moves, char turn)
 	{
 		Collections.sort(moves, new Comparator<Move>(){
@@ -421,11 +386,6 @@ public class GomokuPlayer
 		        	 return obj1.getValue() < obj2.getValue() ? -1 : 1;
 		     }
 		});
-	}
-	
-	private void sortMoves(List<Move> moves)
-	{
-		
 	}
 	
 	
@@ -468,6 +428,7 @@ public class GomokuPlayer
 			return 'x';
 	}
 	
+	//prints the available moves in the supplied array list
 	private void printMoves(List<Move> moves)
 	{
 		for(int i = 0; i < moves.size(); i++)
@@ -476,6 +437,7 @@ public class GomokuPlayer
 		}
 	}
 	
+	//prints the board when given a 2D array of chars
 	private void printBoard(char[][] board)
 	{
 		for(int row = 0; row < boardSize; row++)
@@ -488,6 +450,7 @@ public class GomokuPlayer
 		}
 	}
 	
+	//converts the 2D array for board into string to be used in the hashmap
 	private String boardToString(char[][] board)
 	{
 		StringBuilder builder = new StringBuilder();
@@ -524,6 +487,7 @@ public class GomokuPlayer
 		return false;
 	}
 	
+	//checks for a game winning state(not draws)
 	private int checkTerminal(char[][] board, int depth)
 	{
 		int count = 0;
@@ -557,13 +521,15 @@ public class GomokuPlayer
 					count++;
 				}
 				
+				//if it counts up to 5 then return the infinite value
 				if(count == 5 && player == true)
-					return 10000000 + depth;
+					return INFINITY - depth;
 				else if(count == 5 && player == false)
-					return -10000000 - depth;
+					return NEG_INFINITY + depth;
 				
 				count = 0;
 				
+				//repeat for down
 				for(int i = row; i < row + 5; i++)
 				{
 					if(i >= boardSize || board[i][col] == ' ')
@@ -577,13 +543,13 @@ public class GomokuPlayer
 				}
 				
 				if(count == 5 && player == true)
-					return 10000000 + depth;
+					return INFINITY - depth;
 				else if(count == 5 && player == false)
-					return -10000000 - depth;
+					return NEG_INFINITY + depth;
 				
 				count = 0;
 				
-				
+				//repeat for diagonal top left to bottom right
 				int j = col;
 				for(int i = row; i < row + 5; i++)
 				{
@@ -600,12 +566,13 @@ public class GomokuPlayer
 				}
 				
 				if(count == 5 && player == true)
-					return 10000000 + depth;
+					return INFINITY - depth;
 				else if(count == 5 && player == false)
-					return -10000000 - depth;
+					return NEG_INFINITY + depth;
 				
 				count = 0;
 				
+				//repeat for top right to bottom left
 				j = col;
 				for(int i = row; i < row + 5; i++)
 				{
@@ -622,9 +589,9 @@ public class GomokuPlayer
 				}
 				
 				if(count == 5 && player == true)
-					return 10000000 + depth;
+					return INFINITY - depth;
 				else if(count == 5 && player == false)
-					return -10000000 - depth;
+					return NEG_INFINITY + depth;
 				
 				count = 0;
 				
@@ -635,108 +602,20 @@ public class GomokuPlayer
 		
 	}
 	
-	//implements levi's Heuristic
-	private int otherHeuristic(char[][] board)
-	{
-		double[][] boardValues = new double[boardSize][boardSize];
-		double total;
-		
-		BoardHeuristic heuristic = new BoardHeuristic(player, boardSize, board);
-		heuristic.createBoardValues();
-		boardValues = heuristic.getBoardValues();
-		total = heuristic.boardValueTotal(boardValues);
-		
-		int value = (int)(total * 100);
-		
-		return value;
-	}
-	
-	//simple heuristic to analyze board for testing purposes
-	private int simpleHeuristic(char[][] board)
-	{
-		int score = 0;
-		
-		
-		for(int row = 0; row < boardSize; row++)
-			for(int col = 0; col < boardSize; col++)
-			{
-				//using move just for general information passing
-				Move spot = new Move(row, col);
-				score += simpleHeuristicRow(board, spot);
-			}
-		return score;
-	}
-	
-	//additional function to analyze
-	private int simpleHeuristicRow(char[][] board, Move spot)
-	{
-		int score = 0;
-		int countP = 0;
-		int countE = 0;
-		int countB = 0;
-		
-		//count rows behind for 
-		for(int i = spot.getX(); i > spot.getX() - 5; i--)
-		{
-			if(i < 0)
-				break;
-			if(board[spot.getY()][i] == player)
-				countP++;
-			else if(board[spot.getY()][i] == enemy)
-				countE++;
-			else
-				countB++;
-		}
-		
-		if(countP == 4 && countB == 1)
-			score += 5000;
-		
-		else if(countE == 4 && countB == 1)
-			score -= 10000;
-		
-		/*countP = 0;
-		countE = 0;
-		countB = 0;
-		
-		for(int i = spot.getX(); i < spot.getX() + 5; i++)
-		{
-			if(i >= boardSize)
-				break;
-			if(board[spot.getY()][i] == player)
-				countP++;
-			else if(board[spot.getY()][i] == enemy)
-				countE++;
-			else
-				countB++;
-		}
-		
-		if(countP == 4 && countB == 1)
-			score += 5000;
-		
-		else if(countE == 4 && countB == 1)
-			score -= 10000;
-		
-		else if(countE == 5)
-			score -= 1000000;
-		
-		else if(countP == 5)
-			score += 1000000;*/
-		
-		return score;
-	}
-
-	
+	//main game state evaluation heuristic
 	private int lineHeuristic(char[][] board)
 	{
 		int score = 0;
 		Move spot;
 		
+		//for every spot on the board
 		for(int row = 0; row < boardSize; row++)
 			for(int col = 0; col < boardSize; col++)
 			{
 				spot = new Move(col, row);
 				
-				//evaluate the 4 directions
+				//evaluate the 4 directions(dont need to do others cause they are covered by these
+				//if you go to every space
 				score += lineEval(board, spot, DIRECTIONS[0]);
 				score += lineEval(board, spot, DIRECTIONS[1]);
 				score += lineEval(board, spot, DIRECTIONS[2]);
@@ -744,15 +623,18 @@ public class GomokuPlayer
 			}
 		
 		return score;
-}
+
+	}
 	
+	// used by lineHeuristic(char) to evaluate lines in the four relevant directions
 	private int lineEval(char[][] board, Move spot, Move direction)
 	{
 		int count = 0;
 		char piece = board[spot.getY()][spot.getX()];
 		char evalSpot;
 		
-		
+		//check to see if fives spaces away is off the board
+		//if it is return
 		if(spot.getY() + direction.getY() * WIN - 1 >= boardSize || spot.getY() + direction.getY() * WIN - 1 < 0)
 			return 0;
 		else if(spot.getX() + direction.getX() * WIN - 1 >= boardSize || spot.getX() + direction.getX() * WIN - 1 < 0)
@@ -790,7 +672,104 @@ public class GomokuPlayer
 				return -2 * (int)Math.pow(5, count);
 		else
 			return 0;
-}
+	}
+	
+	//implements levi's Heuristic
+	private int otherHeuristic(char[][] board)
+	{
+		double[][] boardValues = new double[boardSize][boardSize];
+		double total;
+		
+		BoardHeuristic heuristic = new BoardHeuristic(player, boardSize, board);
+		heuristic.createBoardValues();
+		boardValues = heuristic.getBoardValues();
+		total = heuristic.boardValueTotal(boardValues);
+		
+		int value = (int)(total * 100);
+		
+		return value;
+	}
+	
+	/*
+	 * Old heuristic functions
+	 * replaced by line heuristic
+	
+	//simple heuristic to analyze board for testing purposes
+	private int simpleHeuristic(char[][] board)
+	{
+		int score = 0;
+		
+		
+		for(int row = 0; row < boardSize; row++)
+			for(int col = 0; col < boardSize; col++)
+			{
+				//using move just for general information passing
+				Move spot = new Move(row, col);
+				score += simpleHeuristicRow(board, spot);
+			}
+		return score;
+	}
+	
+	
+	
+	//additional function to analyze
+	private int simpleHeuristicRow(char[][] board, Move spot)
+	{
+		int score = 0;
+		int countP = 0;
+		int countE = 0;
+		int countB = 0;
+		
+		//count rows behind for 
+		for(int i = spot.getX(); i > spot.getX() - 5; i--)
+		{
+			if(i < 0)
+				break;
+			if(board[spot.getY()][i] == player)
+				countP++;
+			else if(board[spot.getY()][i] == enemy)
+				countE++;
+			else
+				countB++;
+		}
+		
+		if(countP == 4 && countB == 1)
+			score += 5000;
+		
+		else if(countE == 4 && countB == 1)
+			score -= 10000;
+		
+		countP = 0;
+		countE = 0;
+		countB = 0;
+		
+		for(int i = spot.getX(); i < spot.getX() + 5; i++)
+		{
+			if(i >= boardSize)
+				break;
+			if(board[spot.getY()][i] == player)
+				countP++;
+			else if(board[spot.getY()][i] == enemy)
+				countE++;
+			else
+				countB++;
+		}
+		
+		if(countP == 4 && countB == 1)
+			score += 5000;
+		
+		else if(countE == 4 && countB == 1)
+			score -= 10000;
+		
+		else if(countE == 5)
+			score -= 1000000;
+		
+		else if(countP == 5)
+			score += 1000000;
+		
+		return score;
+	}
+	*/
 	
 	
 }

@@ -1,3 +1,8 @@
+// Move.java: Stores values for a specific move on the board
+
+// CS455 Lab #:2
+// Name: Patrick Matts, Levi Sinclair, Austen Herrick
+// Date: 2/13/17
 
 public class Move {
 

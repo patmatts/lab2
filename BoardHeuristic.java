@@ -1,3 +1,9 @@
+// BoardHeuristic.java: early testing heuristics, lineHeuristic was built upon this 
+// this class is not used anymore
+
+// CS455 Lab #:2
+// Name: Patrick Matts, Levi Sinclair, Austen Herrick
+// Date: 2/13/17
 public class BoardHeuristic
 {
 	private final String UL = "UL";

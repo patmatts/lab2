@@ -173,7 +173,7 @@ public class GomokuPlayer
 		int alpha = NEG_INFINITY;
 		int beta = INFINITY;
 		//variables to start search depth is zero at this point
-		int max = -100000000;
+		int max = -1000000;
 		Move maxMove;
 		// make and get current available moves
 		List<Move> moves = new ArrayList<Move>();
@@ -523,9 +523,9 @@ public class GomokuPlayer
 				
 				//if it counts up to 5 then return the infinite value
 				if(count == 5 && player == true)
-					return INFINITY - depth;
+					return INFINITY;
 				else if(count == 5 && player == false)
-					return NEG_INFINITY + depth;
+					return NEG_INFINITY;
 				
 				count = 0;
 				
@@ -543,9 +543,9 @@ public class GomokuPlayer
 				}
 				
 				if(count == 5 && player == true)
-					return INFINITY - depth;
+					return INFINITY;
 				else if(count == 5 && player == false)
-					return NEG_INFINITY + depth;
+					return NEG_INFINITY;
 				
 				count = 0;
 				
@@ -566,9 +566,9 @@ public class GomokuPlayer
 				}
 				
 				if(count == 5 && player == true)
-					return INFINITY - depth;
+					return INFINITY;
 				else if(count == 5 && player == false)
-					return NEG_INFINITY + depth;
+					return NEG_INFINITY;
 				
 				count = 0;
 				
@@ -589,9 +589,9 @@ public class GomokuPlayer
 				}
 				
 				if(count == 5 && player == true)
-					return INFINITY - depth;
+					return INFINITY;
 				else if(count == 5 && player == false)
-					return NEG_INFINITY + depth;
+					return NEG_INFINITY;
 				
 				count = 0;
 				
@@ -661,15 +661,9 @@ public class GomokuPlayer
 		
 		
 		if(piece == player)
-			if(count == 3)
-				return (int)Math.pow(5, count) * 2;
-			else
-				return (int)Math.pow(5, count);
+			return (int)Math.pow(5, count);
 		else if(piece == enemy)
-			if(count == 3)
-				return -4 * (int)Math.pow(5, count);
-			else
-				return -2 * (int)Math.pow(5, count);
+			return -2 * (int)Math.pow(5, count);
 		else
 			return 0;
 	}
